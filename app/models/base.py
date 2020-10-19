@@ -26,4 +26,7 @@ class Base(db.Model):
         else:
             return None
 
+    def __getitem__(self, item):
+        return getattr(self, item)
+
 

@@ -5,8 +5,8 @@ from app.models.base import Base
 
 
 class UserBind(Base):
-    openid = Column(String(20), primary_key=True)  # user's id in the platform
-    user = relationship('User')
+    openid = Column(String(50), primary_key=True)  # user's id in the platform
+    user = relationship('User', backref='bind_info')
     uid = Column(Integer, ForeignKey('user.id'))
 
     @classmethod

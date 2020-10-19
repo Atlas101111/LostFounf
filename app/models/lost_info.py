@@ -1,4 +1,5 @@
 from flask import current_app
+from flask_login import current_user
 from sqlalchemy import Column, Integer, String, ForeignKey, desc
 from sqlalchemy.orm import relationship
 
@@ -7,38 +8,60 @@ from app.models.base import Base
 
 class LostInfo(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    nickname = Column(String(20), nullable=False)  # nickname of publisher
-    category = Column(String(20), nullable=False, default='其他')
+    category = Column(String(10), nullable=True, default='其他')
     description = Column(String(256), nullable=True)
     location = Column(String(20), nullable=False)  # now it can only indicate the campus
     title = Column(String(30), nullable=False, default='未填写')
-    contact = Column(String(20), nullable=False)  # the contact way user left
-    user = relationship('User')
+    contact = Column(String(10), nullable=False)  # the contact way user left
+    contact_info = Column(String(20), nullable=False)
+    cardID = Column(String(15), nullable=True, default='0')
+    user = relationship('User', backref='lost_info')
     uid = Column(Integer, ForeignKey('user.id'))  # foreign key
+    # photo = relationship('PhotoLost')
 
     @classmethod
-    def recent(cls, category):  # pick up the latest 30 infos in the database
-        recent_ = LostInfo.query.fliter_by(status=True, category=category).group_by(
+    def recent(cls):  # pick up the latest 30 infos in the database
+        recent_ = LostInfo.query.filter_by(status=True).group_by(
             LostInfo.id
         ).order_by(desc(LostInfo.create_time)).distinct().limit(
             current_app.config['RECENT_INFO_COUNT']).all()
         return recent_  # return a list of lost infos, each element is a LostInfo object
 
+    def keys(self):  # for __dict__ to transform this class to a dict
+        return ('description', 'location', 'contact', 'uid', 'contact',
+                'contact_info', 'cardID')
+
+    def upload(self, form):
+        #self.uid = current_user.id
+        #self.user = current_user
+        self.location = form.location.data
+        self.description = form.description.data
+        self.title = form.title.data
+        self.contact = form.contact.data
+        self.contact_info = form.contact_info.data
+        self.cardID = form.cardID.data
+
     @classmethod
-    def to_dict(cls, recent):   # turn the recent result set to list
-        result = []
-        for info in recent:
-            temp = {
-                'id': info.id,
-                'nickname': info.nickname,
-                'category': info.category,
-                'description': info.description,
-                'location': info.location,
-                'uid': info.uid
-            }
-            result.append(temp)
+    def query_by_cardid(cls, cardID):
+        keyword = '%' + cardID + '%'
+        result = LostInfo.query.filter(LostInfo.cardID.like(keyword)).all()
         return result
-        pass
+
+    @classmethod
+    def query_by_keyword(cls, keyword):
+        keyword = '%' + keyword + '%'
+        result = LostInfo.query.filter(LostInfo.title.like(keyword)).all()
+        return result
+
+    @classmethod
+    def my(cls):
+        uid = current_user.id
+        result = LostInfo.query.filter_by(uid=uid).all()
+        return result
+
+
+
+
 
 
 

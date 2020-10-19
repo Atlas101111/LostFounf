@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from flask_login import login_user
 
 from app import db
 from app.models.user import User
@@ -7,21 +8,25 @@ from app.spider.login_spider import LoginSpider
 from app.web import web
 
 
-@web.route('/login', methods=['POST', 'GET'])
+@web.route('/web/login', methods=['POST'])
 def login():
     response = {'code': 200, 'msg': '登录成功', 'data': {}}
     request_value = request.values
     code = request_value['code'] if 'code' in request_value else ''
     if not code or len(code) < 1:
         response['code'] = -1
-        response['msg'] = '登录失败'
+        response['msg'] = '登录失败, 未得到code凭证'
         return jsonify(response)
 
-    spider = LoginSpider()   # spider is loaded with openid
-    spider.get_openid(code)
-    result = UserBind.in_table(spider.openID)  # result is a record
+    # spider = LoginSpider()   # spider is loaded with openid
+    # spider.get_openid(code)
+    # result = UserBind.in_table(spider.openID)  # result is a record
+    Test_openid = '119'
+    result = UserBind.in_table(Test_openid)
+
     if result:   # user's openid has been bound
         # login procedure
+        login_user(result.user, remember=True)
         response['data'] = {
             'gender': result.user.gender,
             'nickName': result.user.nickname,
@@ -35,14 +40,16 @@ def login():
             user.gender = request_value['gender']
             user.avatarUrl = request_value['avatarUrl']
             db.session.add(user)
-
+        with db.auto_commit():
             user_bind = UserBind()
-            user_bind.openid = spider.openID
-            user_bind.uid = user.id   # Mind this statement, not sure if it can work
+            #user_bind.openid = spider.openID          ################
+            user_bind.openid = Test_openid
             user_bind.user = user
+            # Mind this statement, not sure if it can work
             db.session.add(user_bind)
 
-        response['data'] = {
+        login_user(user, remember=True)
+        response['data'] = {    # response after the register procedure
             'gender': user.gender,
             'nickName': user.nickname,
             'id': user.id,
